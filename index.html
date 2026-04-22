@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>NepHR</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-bg: #508C7F;
+            --text-white: #ffffff;
+        }
+
+        body, html { 
+            margin: 0; padding: 0; height: 100%; width: 100%; 
+            overflow: hidden; background-color: var(--primary-bg); 
+            font-family: 'Segoe UI', Roboto, sans-serif; 
+        }
+
+        #appFrame { width: 100%; height: 100%; border: none; display: block; }
+
+        /* Khatra Animated Offline UI */
+        #offline-screen {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            color: var(--text-white);
+            text-align: center;
+            padding: 20px;
+            background: radial-gradient(circle, #508C7F 0%, #355d54 100%);
+        }
+
+        /* Signal Wave Animation Logic */
+        .icon-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 50px;
+        }
+
+        .wifi-base {
+            font-size: 80px;
+            z-index: 5;
+            position: relative;
+            animation: bounce 2s infinite ease-in-out;
+        }
+
+        .wave {
+            position: absolute;
+            border: 2px solid rgba(255, 255, 255, 0.4);
+            border-radius: 50%;
+            animation: ripple 2s infinite linear;
+            opacity: 0;
+        }
+
+        .wave:nth-child(2) { animation-delay: 0.5s; }
+        .wave:nth-child(3) { animation-delay: 1s; }
+
+        @keyframes ripple {
+            0% { width: 80px; height: 80px; opacity: 0.8; }
+            100% { width: 220px; height: 220px; opacity: 0; }
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        h1 { font-size: 30px; margin: 10px 0; font-weight: 700; }
+        p { font-size: 17px; opacity: 0.8; max-width: 320px; line-height: 1.5; margin-bottom: 30px; }
+
+        .retry-btn {
+            padding: 16px 45px;
+            border-radius: 35px;
+            border: none;
+            background: white;
+            color: var(--primary-bg);
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-transform: uppercase;
+        }
+
+        .retry-btn:hover { transform: scale(1.05); }
+        .retry-btn:active { transform: scale(0.95); }
+
+        /* Success Spinner */
+        .loader {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid var(--primary-bg);
+            border-radius: 50%;
+            width: 18px; height: 18px;
+            animation: spin 1s linear infinite;
+            display: none;
+        }
+
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        .footer-tag {
+            position: absolute;
+            bottom: 30px;
+            font-size: 12px;
+            opacity: 0.5;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- Main Application Iframe -->
+    <iframe id="appFrame" src="https://script.google.com/macros/s/AKfycbw93Pk4AqO1uIJTo_HsasFaH6WYaXznAfbJZryeyR0hdLziAnTQsFzcFIDAiugC3ILB/exec" allow="geolocation; camera"></iframe>
+
+    <!-- Khatra Offline UI -->
+    <div id="offline-screen">
+        <div class="icon-wrapper">
+            <div class="wave"></div>
+            <div class="wave"></div>
+            <div class="wave"></div>
+            <i class="fas fa-wifi wifi-base"></i>
+        </div>
+
+        <h1>Offline Connection</h1>
+        <p>No internet connection found. Please check your WiFi or mobile data to access NepHR.</p>
+        
+        <button class="retry-btn" onclick="retryConnection()">
+            <span class="loader" id="loader"></span>
+            <span id="btn-text">Retry Connection</span>
+        </button>
+
+        <div class="footer-tag">Connectivity Status: Disconnected</div>
+    </div>
+
+    <script>
+        const frame = document.getElementById('appFrame');
+        const offlineScreen = document.getElementById('offline-screen');
+        const loader = document.getElementById('loader');
+        const btnText = document.getElementById('btn-text');
+
+        function checkStatus() {
+            if (navigator.onLine) {
+                frame.style.display = "block";
+                offlineScreen.style.display = "none";
+            } else {
+                frame.style.display = "none";
+                offlineScreen.style.display = "flex";
+            }
+        }
+
+        function retryConnection() {
+            btnText.innerText = "Checking...";
+            loader.style.display = "block";
+            
+            setTimeout(() => {
+                if (navigator.onLine) {
+                    location.reload(); 
+                } else {
+                    loader.style.display = "none";
+                    btnText.innerText = "Retry Connection";
+                    // Alert with shake
+                    offlineScreen.style.animation = "shake 0.4s";
+                    setTimeout(() => offlineScreen.style.animation = "", 400);
+                }
+            }, 1500);
+        }
+
+        window.addEventListener('online', checkStatus);
+        window.addEventListener('offline', checkStatus);
+        window.onload = checkStatus;
+
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => { 
+                navigator.serviceWorker.register('sw.js'); 
+            });
+        }
+    </script>
+
+    <style>
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+    </style>
+</body>
+</html>
