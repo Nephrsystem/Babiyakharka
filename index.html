@@ -248,6 +248,48 @@
                     .catch(err => console.warn('[PWA] Service Worker Failed:', err)); 
             });
         }
+
+        // 🟢 SMART PWA AUTO-UPDATE DETECTOR
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => { 
+            navigator.serviceWorker.register('sw.js?v=4').then(reg => {
+                console.log('[PWA] Service Worker Active');
+
+                // १. ब्याकग्राउन्डमा नयाँ अपडेट चेक गर्ने
+                reg.onupdatefound = () => {
+                    const installingWorker = reg.installing;
+                    if (installingWorker == null) return;
+                    
+                    installingWorker.onstatechange = () => {
+                        if (installingWorker.state === 'installed') {
+                            if (navigator.serviceWorker.controller) {
+                                console.log('[PWA] New update found! Auto-reloading app...');
+                                // नयाँ अपडेट आएपछि आफैं १ सेकेन्डमा रिफ्रेस हुने
+                                window.location.reload();
+                            }
+                        }
+                    };
+                };
+            }).catch(err => console.warn('[PWA] SW Reg Error:', err)); 
+        });
+
+        // २. जब नयाँ वर्करले नियन्त्रण लिन्छ, स्वतः रिफ्रेस गर्ने
+        let refreshing = false;
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+            if (!refreshing) {
+                refreshing = true;
+                console.log('[PWA] Controller changed. Reloading page...');
+                window.location.reload();
+            }
+        });
+
+        // ३. मोबाइलमा एप खोल्नासाथ (App Resume/Foreground हुँदा) नयाँ अपडेट जाँच गर्ने (iOS & Android)
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible' && navigator.serviceWorker.controller) {
+                navigator.serviceWorker.ready.then(reg => reg.update());
+            }
+        });
+    }
     </script>
 </body>
 </html>
