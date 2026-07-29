@@ -1,4 +1,6 @@
-const CACHE_NAME = 'nephr-cache-v4'; // 🟢 Updated to v4 for cache invalidation
+// 🟢 CACHE VERSION: जब जब नयाँ अपडेट हाल्नुहुन्छ, यो भर्सन (v4 -> v5 -> v6) बढाउनुहोस्
+const CACHE_NAME = 'nephr-cache-v4'; 
+
 const FILES_TO_CACHE = [
   './',
   './index.html',
@@ -6,47 +8,45 @@ const FILES_TO_CACHE = [
   './icon.png'
 ];
 
-// Install Event: Cache essential wrapper files
+// 1. Install Event: नयाँ भर्सन आउनासाथ तुरुन्तै इन्स्टल गर्ने
 self.addEventListener('install', (e) => {
-  self.skipWaiting(); // Force new Service Worker to activate instantly
+  self.skipWaiting(); // 🟢 पुराना वर्करलाई नकुरी नयाँ वर्कर तुरुन्तै लागू गर्ने
   e.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(FILES_TO_CACHE))
   );
 });
 
-// Activate Event: Clear older caches (v1, v2, v3, etc.)
+// 2. Activate Event: पुराना सबै क्यास (v1, v2, v3...) मेट्ने
 self.addEventListener('activate', (e) => {
   e.waitUntil(
     caches.keys().then((keyList) => {
       return Promise.all(keyList.map((key) => {
         if (key !== CACHE_NAME) {
-          console.log('[SW] Deleting old cache:', key);
-          return caches.delete(key);
+          console.log('[PWA-AUTO-UPDATE] Deleting old cache:', key);
+          return caches.delete(key); // पुरानो क्यास फाल्ने
         }
       }));
     })
   );
-  return self.clients.claim();
+  return self.clients.claim(); // 🟢 सबै खोलिएका PWA एपहरूमा नयाँ भर्सन तुरुन्तै लागू गर्ने
 });
 
-// Fetch Event: Network-First strategy for index.html & bypass GAS completely
+// 3. Fetch Event: GAS लाई क्यास नगर्ने र नयाँ कोड तान्ने
 self.addEventListener('fetch', (e) => {
-  // Never cache Google Apps Script URLs
   if (e.request.url.includes('script.google.com') || e.request.url.includes('script.googleusercontent.com')) {
-    return;
+    return; // GAS API Calls हरूलाई सधैं Live चलाउने
   }
 
-  // Network-first strategy for wrapper page to ensure latest updates
+  // Network First Strategy (नयाँ कोड खोज्ने, नभए मात्र क्यास चलाउने)
   e.respondWith(
     fetch(e.request)
       .then((response) => {
-        // Update cache with fresh version
         if (response.status === 200) {
           const resClone = response.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(e.request, resClone));
         }
         return response;
       })
-      .catch(() => caches.match(e.request)) // Fallback to cache if offline
+      .catch(() => caches.match(e.request))
   );
 });
